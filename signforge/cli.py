@@ -54,9 +54,9 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--preset", choices=sorted(PRESET_PARAMS), help="start from a preset")
     b.add_argument("--text", help="sign text (use \\n for multi-line)")
     b.add_argument("--font", help="font file path OR bundled name "
-                                  "(bungee, monoton, limelight, … — see /api/fonts)")
+                                  "(bungee, bebas, lobster, … — see /api/fonts)")
     b.add_argument("--art", help="SVG/DXF/PNG artwork path instead of text")
-    b.add_argument("--style", choices=["neon", "channel"])
+    b.add_argument("--style", choices=["neon", "channel", "halo"])
     b.add_argument("--backer", choices=["tile", "contour", "none"])
     b.add_argument("--cap-height", type=float, dest="cap_height", help="letter height, mm")
     b.add_argument("--printer", help="printer preset (see docs)")
@@ -83,6 +83,12 @@ def main(argv: list[str] | None = None) -> int:
             result = build(params, args.out, progress=lambda m: print(f"  · {m}"))
         except BuildError as e:
             print(f"BUILD FAILED: {e}", file=sys.stderr)
+            return 1
+        except Exception as e:  # internal fault: fail clean, keep the evidence
+            import traceback
+
+            traceback.print_exc()
+            print(f"BUILD FAILED (internal error): {e}", file=sys.stderr)
             return 1
         print(json.dumps(result.stats, indent=2))
         for w in result.warnings:

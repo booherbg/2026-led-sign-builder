@@ -75,3 +75,10 @@ def test_cli_accepts_bundled_name(tmp_path):
     rc = main(["build", "--text", "Hi", "--font", "righteous", "--style", "channel",
                "--backer", "none", "--cap-height", "50", "-o", str(tmp_path)])
     assert rc == 0
+
+
+def test_featured_curation_is_a_handful_of_visible_fonts():
+    featured = [k for k, v in BUNDLED_FONTS.items() if v.get("featured")]
+    assert 4 <= len(featured) <= 8                   # a handful, not the library
+    assert all(BUNDLED_FONTS[k].get("v1", True) for k in featured)
+    assert "bungee" in featured                      # the default face leads

@@ -136,6 +136,10 @@ td select{padding:3px 6px;width:auto}
   overflow:hidden;text-overflow:ellipsis}
 .fontgrid .fname{font-family:ui-monospace,Menlo,monospace;font-size:8px;letter-spacing:.14em;
   color:var(--ink-dim);text-transform:uppercase;margin-top:2px}
+.fontgrid .ftile.extra{display:none}
+.fontgrid.expanded .ftile.extra{display:block}
+.fontgrid .ftile.more .sample{color:var(--verd);font-size:15px;line-height:1.6}
+.fontgrid .ftile.more:hover{border-color:var(--verd)}
 .libgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .libgrid .tile{aspect-ratio:1;background:var(--recess);border:1px solid var(--line);
   border-radius:5px;padding:6px;cursor:pointer;display:flex;align-items:center;

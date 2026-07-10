@@ -36,24 +36,34 @@ def default_font_path() -> str:
 
 # Bundled open-source font library (all SIL OFL; license texts ship alongside).
 # name -> file, display label, vibe tag (shown in the console picker).
+# featured: True → the console's short list; the rest sit behind "+ more".
+# Curation evidence: docs/gallery/type-specimen.png — every font built as neon
+# at default settings; featured faces are the ones whose tubes read clean with
+# dense, even pixel runs.
 BUNDLED_FONTS: dict[str, dict] = {
-    "bungee": {"file": "Bungee-Regular.ttf", "label": "Bungee", "vibe": "marquee"},
+    "bungee": {"file": "Bungee-Regular.ttf", "label": "Bungee", "vibe": "marquee",
+               "featured": True},
     "alfa-slab": {"file": "AlfaSlabOne-Regular.ttf", "label": "Alfa Slab One", "vibe": "heavy slab"},
-    "audiowide": {"file": "Audiowide-Regular.ttf", "label": "Audiowide", "vibe": "retro-tech"},
-    "bebas": {"file": "BebasNeue-Regular.ttf", "label": "Bebas Neue", "vibe": "tall condensed"},
+    "audiowide": {"file": "Audiowide-Regular.ttf", "label": "Audiowide", "vibe": "retro-tech",
+                  "featured": True},
+    "bebas": {"file": "BebasNeue-Regular.ttf", "label": "Bebas Neue", "vibe": "tall condensed",
+              "featured": True},
     "black-ops": {"file": "BlackOpsOne-Regular.ttf", "label": "Black Ops One", "vibe": "stencil"},
     # v1: False → hidden from the console picker (JSON/CLI still accept it);
     # curation data: pixel counts + warning noise at DEFAULT settings
     "great-vibes": {"file": "GreatVibes-Regular.ttf", "label": "Great Vibes",
                     "vibe": "formal script · big sizes", "v1": False},
     "limelight": {"file": "Limelight-Regular.ttf", "label": "Limelight", "vibe": "art deco"},
-    "lobster": {"file": "Lobster-Regular.ttf", "label": "Lobster", "vibe": "bold script"},
+    "lobster": {"file": "Lobster-Regular.ttf", "label": "Lobster", "vibe": "bold script",
+                "featured": True},
     "monoton": {"file": "Monoton-Regular.ttf", "label": "Monoton",
                 "vibe": "neon lines · huge sizes", "v1": False},
-    "orbitron": {"file": "Orbitron-Variable.ttf", "label": "Orbitron", "vibe": "sci-fi"},
+    "orbitron": {"file": "Orbitron-Variable.ttf", "label": "Orbitron", "vibe": "sci-fi",
+                 "featured": True},
     "oswald": {"file": "Oswald-Variable.ttf", "label": "Oswald", "vibe": "condensed sans"},
     "pacifico": {"file": "Pacifico-Regular.ttf", "label": "Pacifico", "vibe": "casual script"},
-    "righteous": {"file": "Righteous-Regular.ttf", "label": "Righteous", "vibe": "retro sans"},
+    "righteous": {"file": "Righteous-Regular.ttf", "label": "Righteous", "vibe": "retro sans",
+                  "featured": True},
     "shrikhand": {"file": "Shrikhand-Regular.ttf", "label": "Shrikhand", "vibe": "juicy display"},
     # NOTE: Rye (western) was removed after the type-specimen audit — its
     # inline filigree sits below tube resolution at every practical size

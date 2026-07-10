@@ -21,6 +21,9 @@ async function init(){
 async function loadFonts(){
   const fonts = (await (await fetch('/api/fonts')).json()).fonts;
   const grid = $('fontgrid');
+  // featured faces up front (specimen-sheet curation); the rest behind "+ more"
+  fonts.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+  const extras = fonts.filter(f => !f.featured).length;
   for (const f of fonts){
     try {
       const face = new FontFace(`sf-${f.name}`, `url(${f.url})`);
@@ -28,7 +31,7 @@ async function loadFonts(){
       document.fonts.add(face);
     } catch { /* tile falls back to system font */ }
     const t = document.createElement('div');
-    t.className = 'ftile' + (f.name === fontPick ? ' sel' : '');
+    t.className = 'ftile' + (f.name === fontPick ? ' sel' : '') + (f.featured ? '' : ' extra');
     t.dataset.name = f.name;
     t.innerHTML = `<div class="sample" style="font-family:'sf-${f.name}',system-ui">GLOW 24</div>
                    <div class="fname">${f.label} · ${f.vibe}</div>`;
@@ -40,6 +43,14 @@ async function loadFonts(){
       schedule();
     };
     grid.appendChild(t);
+  }
+  if (extras){
+    const more = document.createElement('div');
+    more.className = 'ftile more';
+    more.innerHTML = `<div class="sample">+ ${extras} more</div>
+                      <div class="fname">full library</div>`;
+    more.onclick = () => { grid.classList.add('expanded'); more.remove(); };
+    grid.appendChild(more);
   }
 }
 
@@ -280,7 +291,7 @@ function paramsFromUI(){
   base.texture.targets = targets.length ? targets : ['lens'];
   base.leds = base.leds || {};
   base.leds.kind = $('leds').value;
-  base.leds.pitch_mm = Math.max(14, +$('pitch').value || 17);
+  base.leds.pitch_mm = Math.max(13, +$('pitch').value || 17);  // schema floor: flange is 13
   base.colors = base.colors || {};
   base.colors.palette = $('palette').value;
   const cc = customColors();
@@ -350,6 +361,13 @@ async function uploadFile(kind){
 
 /* ---------- queue ---------- */
 async function build(){
+  // never build against silently-dropped params — accuracy over convenience
+  try { JSON.parse($('advanced').value); }
+  catch {
+    $('joblog').hidden = false;
+    $('joblog').textContent = '✗ the All-parameters JSON has a syntax error — fix it (or re-apply a preset) before building';
+    return;
+  }
   $('buildbtn').disabled = true;
   const r = await fetch('/api/build', {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload())});
