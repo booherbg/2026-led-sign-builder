@@ -62,3 +62,39 @@ def test_flat_plate_splitter_unit():
     assert len(parts2) == 1 and rotated2 and cuts2 == 0
     b = parts2[0].bounding_box()
     assert b[3] - b[0] <= 316.6 and b[4] - b[1] <= 295.6
+
+
+# ---- the bed-fit GATE: what can't plate must not export -----------------
+
+_BIG_HALO = {
+    # single-glyph halo face can't split in v1; on the a1-mini bed (180) a
+    # 250 mm letter is unsplittable-oversized — the old path warned and
+    # shipped it anyway
+    "name": "gate-halo",
+    "content": {"text": "I", "cap_height_mm": 250},
+    "style": {"kind": "halo", "backer": "none"},
+    "texture": {"mode": "none"},
+    "leds": {"kind": "none"},
+    "printer": {"preset": "bambu-a1-mini"},
+}
+
+
+def test_bed_gate_refuses_oversized_export(tmp_path):
+    from signforge.verify import BuildError
+
+    with pytest.raises(BuildError, match="bed-fit gate"):
+        build(SignParams.model_validate(_BIG_HALO), tmp_path / "gate")
+
+
+def test_bed_gate_preview_warns_instead_of_raising():
+    from signforge.pipeline import quick_plan
+
+    _, _, _, warnings = quick_plan(SignParams.model_validate(_BIG_HALO))
+    assert any(w.startswith("WON'T BUILD") for w in warnings)
+
+
+def test_bed_gate_allow_oversize_escape_hatch(tmp_path):
+    cfg = dict(_BIG_HALO)
+    cfg["printer"] = {"preset": "bambu-a1-mini", "allow_oversize": True}
+    result = build(SignParams.model_validate(cfg), tmp_path / "hatch")
+    assert any("OVERSIZE EXPORT" in w for w in result.warnings)

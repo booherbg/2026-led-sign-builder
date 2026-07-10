@@ -166,6 +166,10 @@ class PrinterParams(BaseModel):
     preset: str = "bambu-h2d-dual"
     bed_x_mm: Optional[float] = Field(None, gt=50)
     bed_y_mm: Optional[float] = Field(None, gt=50)
+    # escape hatch for the bed-fit gate (JSON/CLI only, not in the console):
+    # export pieces that exceed the bed anyway — you saw the warning, you own
+    # the saw. Default False: a kit that can't plate is a hard BuildError.
+    allow_oversize: bool = False
 
     @model_validator(mode="after")
     def _known_preset(self) -> "PrinterParams":

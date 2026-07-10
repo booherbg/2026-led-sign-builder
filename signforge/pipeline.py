@@ -106,6 +106,36 @@ def _autofit_text(params: SignParams, art, layout, warnings: list[str]):
     return p2, art, layout
 
 
+def _bed_gate(pieces, params: SignParams, warnings: list[str], hard: bool) -> None:
+    """Bed-fit is a promise, not a hope. Upstream panelization warns-and-ships
+    in a few unsplittable cases (halo single face, region with no legal cut,
+    one letter bigger than the bed); this single gate measures every piece
+    mask against the printable envelope (either orientation) and refuses to
+    export what can't plate. hard=False (previews) downgrades to a loud
+    warning so you can still see the blueprint while dialing the size in.
+    printer.allow_oversize=true (JSON/CLI only) is the I'll-saw-it-myself
+    escape hatch."""
+    bx, by = params.printer.bed
+    eps = 0.1  # float slop; full-bed grid panels are legitimately bed-sized
+    bad = []
+    for pc in pieces:
+        x0, y0, x1, y1 = pc.mask.bounds
+        w, h = x1 - x0, y1 - y0
+        if not ((w <= bx + eps and h <= by + eps) or (h <= bx + eps and w <= by + eps)):
+            bad.append(f"{pc.label} needs {w:.0f}×{h:.0f} mm (bed {bx:.0f}×{by:.0f})")
+    if not bad:
+        return
+    msg = ("bed-fit gate: " + "; ".join(bad)
+           + " — reduce the sign size or pick a larger printer")
+    if params.printer.allow_oversize:
+        warnings.append("OVERSIZE EXPORT (allow_oversize): " + "; ".join(bad))
+        return
+    if not hard:
+        warnings.insert(0, "WON'T BUILD — " + msg)
+        return
+    raise BuildError(msg + " (or set printer.allow_oversize=true to export anyway)")
+
+
 def _channel_led_spine(layout, params: SignParams):
     """Bullet pixels light a channel face from inside the cavity — run them
     along the per-letter skeleton (the face diffuses the rest)."""
@@ -177,6 +207,12 @@ def quick_plan(params: SignParams):
         else:
             pieces, cuts, pwarn = panelize(footprint, strokes, [], params)
             warnings += pwarn
+            if len(pieces) > 1:
+                # halo faces can't split in v1 — preview the true single plate
+                # so the bed gate judges what build() would actually export
+                x0, y0, x1, y1 = footprint.bounds
+                pieces[0].mask = bbox_polygon(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+                cuts = []
             pieces = pieces[:1]
         if params.leds.kind == "bullet12":
             ledplan = place_pixels(strokes, params, seams=cuts)
@@ -204,6 +240,7 @@ def quick_plan(params: SignParams):
 
             ledplan = strip_plan(strokes, params)
     assign_pixels(pieces, pixels)
+    _bed_gate(pieces, params, warnings, hard=False)
     return layout, ledplan, pieces, warnings
 
 
@@ -348,6 +385,7 @@ def build(
             files.append(str(dpath))
 
     assign_pixels(pieces, pixels)
+    _bed_gate(pieces, params, warnings, hard=True)
     multi = len(pieces) > 1
     for pc in pieces:
         if pc.rotated:
