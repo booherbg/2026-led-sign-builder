@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
-CHARGE = Path(__file__).resolve().parents[2] / "assets" / "svg" / "CHARGE.svg"
+CHARGE = Path(__file__).resolve().parents[1] / "examples" / "CHARGE.svg"
 
 FAILS: list[str] = []
 
@@ -29,7 +29,7 @@ def check(ok: bool, msg: str) -> None:
 
 def main() -> int:
     if not CHARGE.exists():
-        print("CHARGE.svg not found (needs the parent repo) — cannot run gold QA")
+        print("examples/CHARGE.svg not found — cannot run gold QA")
         return 2
 
     from signforge.export.stl import read_stl
@@ -97,16 +97,38 @@ def main() -> int:
         zmax = v[:, 2].max()
         check(21.5 <= zmax <= 23.2, f"lens z-top {zmax:.2f} (21+1.2 lens + ≤0.7 texture)")
 
-    print("\n== 3MF structure (Bambu mapping) ==")
+    print("\n== 3MF structure (Bambu mapping) + mesh re-audit ==")
+    import numpy as np
+
+    ns = {"m": "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"}
     for f in sorted(Path(outdir, "3mf").glob("*.3mf")):
         with zipfile.ZipFile(f) as z:
             names = set(z.namelist())
             ok = {"3D/3dmodel.model", "Metadata/model_settings.config"} <= names
             if ok:
-                ET.fromstring(z.read("3D/3dmodel.model"))
+                model = ET.fromstring(z.read("3D/3dmodel.model"))
                 cfg = z.read("Metadata/model_settings.config").decode()
                 ok = 'key="extruder"' in cfg
             check(ok, f"{f.name}: parseable, extruder-mapped")
+            if not ok:
+                continue
+            # the 3MF is what Bambu prints — audit the meshes AS WRITTEN
+            # (the %.6g write gap merged audited-distinct vertices; this
+            # catches any precision regression from the file outward)
+            for obj in model.findall(".//m:object", ns):
+                mesh = obj.find("m:mesh", ns)
+                if mesh is None:
+                    continue  # the components group object
+                vs = np.array([[float(vx.get(a)) for a in "xyz"]
+                               for vx in mesh.findall("m:vertices/m:vertex", ns)],
+                              dtype=np.float32)
+                ts = np.array([[int(tr.get(a)) for a in ("v1", "v2", "v3")]
+                               for tr in mesh.findall("m:triangles/m:triangle", ns)])
+                rep = edge_report(vs, ts)
+                check(
+                    rep["boundary"] == 0 and rep["pinch"] == 0 and rep["degenerate"] == 0,
+                    f"{f.name} obj{obj.get('id')}: 3MF mesh 2-manifold ({rep['tris']} tris)",
+                )
 
     print("\n== kit artifacts ==")
     for rel in ["BOM.md", "params.json", "wled_ledmap.json", "preview/index.html",

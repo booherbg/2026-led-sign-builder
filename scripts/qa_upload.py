@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from qa_kit import verify_kit  # noqa: E402
 
-CHARGE = Path(__file__).resolve().parents[2] / "assets" / "svg" / "CHARGE.svg"
+CHARGE = Path(__file__).resolve().parents[1] / "examples" / "CHARGE.svg"
 FAILS: list[str] = []
 
 

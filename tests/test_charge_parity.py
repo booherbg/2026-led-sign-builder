@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-CHARGE = Path(__file__).resolve().parents[2] / "assets" / "svg" / "CHARGE.svg"
+CHARGE = Path(__file__).resolve().parents[1] / "examples" / "CHARGE.svg"
 
 
 @pytest.mark.slow

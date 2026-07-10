@@ -1,9 +1,11 @@
 # CLAUDE.md — LED Sign Builder (signforge)
 
-Rules for any agent/dev working in this subproject.
+Rules for any agent/dev working in this repo.
 
 ## Where you are
-- Branch `led-sign-builder`, worktree `.claude/worktrees/led-sign-builder/`. **Only touch `led-sign-builder/**`.** The parent CHARGE project is reference-only — read it at the repo root paths, never modify it.
+- Standalone repo (extracted 2026-07-10, history preserved, from
+  `tedxfargo-charge-sign` branch `led-sign-builder`). The CHARGE parent
+  project is reference-only at `../2026-charge-tedxfargo` — never modify it.
 - Continuity: `HANDOFF.md` (state + next step), session task list, `docs/plans/2026-07-06-implementation.md` (checkboxes), `docs/specs/…-design.md` (why).
 
 ## Commands
@@ -11,15 +13,16 @@ Rules for any agent/dev working in this subproject.
 - CLI: `uv run signforge build --text HI --style neon -o /tmp/out` (also `--art x.svg`, `--params f.json`)
 - Coupons: `uv run signforge coupon -o /tmp/coupons`
 - Web: `uv run signforge serve` → http://127.0.0.1:8763
-- ALWAYS run bash from this directory (`led-sign-builder/`), not the worktree root — `uv run` needs the pyproject.
+- Run bash from the repo root — `uv run` needs the pyproject.
+- Full baseline before shipping: fast + `-m slow` + `scripts/qa_gold.py` (rules: `docs/QA-BASELINE.md`).
 
 ## Architecture
 `ingest/*` → `model.Artwork` → `layout` → `skeleton` (neon) → `leds` → `panelize` → `parts/{neon,channel}` Bodies (manifold3d) → `verify` gates → `export/{stl,threemf,bundle}` → `preview/html`. Orchestrator `pipeline.build(params, outdir)`; CLI and `web/app.py` are thin clients. Parameter schema: `params.py` (pydantic v2, CHARGE-validated defaults).
 
 ## Git discipline
-- Commit per completed unit (tests green first). **Push `led-sign-builder` to
-  origin after every commit batch** (user-authorized 2026-07-07; the repo is
-  PUBLIC — keep licenses clean for anything bundled). Never touch `main`.
+- Commit per completed unit (tests green first). **Push `main` to origin after
+  every commit batch** (user-authorized 2026-07-07; the repo is PUBLIC — keep
+  licenses clean for anything bundled).
 
 ## Laws (evidence: docs/LESSONS-FROM-CHARGE.md)
 1. Every exported mesh passes `verify.audit_mesh` — **hard fail**, never warn-only.
@@ -29,8 +32,12 @@ Rules for any agent/dev working in this subproject.
 5. Print in use orientation; pre-mirror flip-to-use parts.
 6. mm everywhere; constants change only with a new printed test (they carry provenance).
 7. No outbound network calls in library/web code. Test assets are committed with licenses.
+8. The bed-fit gate is hard: what can't plate doesn't export (`pipeline._bed_gate`;
+   `printer.allow_oversize` is the only escape and lives in JSON/CLI, not the console).
+9. Exported files are the truth: gold QA re-audits STL **and 3MF** meshes from disk
+   at the precision they were written (float32).
 
-## Porting sources (read, don't copy blindly)
+## Porting sources (read, don't copy blindly — all under `../2026-charge-tedxfargo/`)
 - 3MF + manifold audit: `tools/make_3mf.py` · skeleton: `tools/centerline.py` · textures: `tools/make_fuzz.py`
 - Bodies: `src/parts/piece.scad`, `src/letter.scad`, `src/config.scad` · panelizer: `tools/panelize.py`
 - Audits: `tools/clearance_audit.py`, `tools/qa_coverage.py` · previews: `tools/gen_cutpreview.py`

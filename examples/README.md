@@ -6,6 +6,8 @@ Each file is a complete, reproducible build:
 uv run signforge build --params examples/neon-classic.json -o out/open-neon
 uv run signforge build --params examples/channel-bold.json -o out/cafe
 uv run signforge build --params examples/mini-desk.json -o out/mini
+uv run signforge build --params examples/halo-backlit.json -o out/halo
+uv run signforge build --params examples/charge-replica.json -o out/charge  # the TEDx original
 ```
 
 Or with artwork instead of text:

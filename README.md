@@ -115,11 +115,11 @@ multi-tenant hosting).
 
 `signforge/` — pipeline (`params → ingest → layout → tubes/leds → panelize → parts →
 verify → export → preview`), `web/` FastAPI + static UI, `cli.py`.
-`tests/` — 99 tests incl. a 9-case format×style build matrix; fixture fonts are OFL
+`tests/` — 213 tests (fast + slow) incl. a 9-case format×style build matrix; fixture fonts are OFL
 (licenses committed). `docs/` — design spec, implementation plan, CHARGE lessons.
 
-## Roadmap (P2)
+## Roadmap
 
-Corridor/piecewise seams · halo/backlit style · keyhole mounts · pixel relaxation
-parity · strip-LED channels · presets gallery · wiring diagram SVG · hosted-mode
-hardening · `.scad` layout export.
+Keyhole mounts · pixel relaxation parity · hosted-mode hardening ·
+`.scad` layout export. (Corridor seams, halo style, strip LEDs, the preset
+gallery, and wiring diagrams all shipped — see the gallery.)

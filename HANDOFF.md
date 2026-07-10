@@ -1,5 +1,24 @@
 # HANDOFF — LED Sign Builder
 
+## 2026-07-10 — EXTRACTED TO ITS OWN REPO + full audit round
+- This project now lives at `~/workspace/2026-led-sign-builder` →
+  github.com/booherbg/2026-led-sign-builder (subtree-split from
+  `tedxfargo-charge-sign` branch `led-sign-builder`, history preserved).
+- Audit fixes (all baselines green: 189 fast + 24 slow + gold):
+  * BED-FIT GATE IS NOW HARD: `pipeline._bed_gate` refuses to export any piece
+    that exceeds the bed (previews warn "WON'T BUILD"); `printer.allow_oversize`
+    (JSON-only) is the escape hatch. Killed 5 warn-and-ship paths.
+  * 3MF float32 write gap closed: vertices now written at full float32
+    round-trip precision (%.9g); gold QA re-audits meshes parsed from the 3MF.
+  * Console: featured font shortlist (bungee/bebas/audiowide/orbitron/
+    righteous/lobster per the specimen sheet) + "+N more" expander; advanced
+    controls (tracking, tube morph, textures, pitch, ribs, custom colors)
+    collapsed into an Advanced drawer; build blocked on invalid JSON.
+  * CLI: `--style halo` added; internal errors fail clean.
+  * `examples/CHARGE.svg` vendored (gold QA self-contained); stale doc claims
+    fixed (14 fonts not 15, real test counts, roadmap, LICENSE font note).
+- USER-gated (unchanged): PyPI publish, H2D fit-ladder print, Bambu 3MF eyeball.
+
 **Updated:** 2026-07-06 ~16:30 · autonomous overnight build (~24 h window, cron check-ins every 20 min)
 
 ## Mission
@@ -105,7 +124,7 @@ once on first run; `--open` to skip accounts).
   PyPI, H2D fit-ladder print, Bambu 3MF eyeball, console walkthrough.
 
 ## Resume protocol (any fresh session)
-1. `cd /Users/blaine/workspace/2026-charge-tedxfargo/.claude/worktrees/led-sign-builder/led-sign-builder`
+1. `cd /Users/blaine/workspace/2026-led-sign-builder`
 2. Read this file, then `git log --oneline -15`, then `uv run pytest`.
 3. Open the plan, find the first unchecked task, continue. Update this file + check plan boxes at every commit.
 
@@ -116,7 +135,7 @@ once on first run; `--open` to skip accounts).
 - Worktree discipline: nothing outside `led-sign-builder/` is ever modified.
 
 ## Font library + GitHub (2026-07-07)
-- 15 bundled OFL typefaces (registry in ingest/fonts.py, /api/fonts, console
+- 14 bundled OFL typefaces (Rye cut by the specimen audit; registry in ingest/fonts.py, /api/fonts, console
   typeface grid w/ live FontFace previews, CLI --font names). Clearance floods
   aggregate into one actionable size-hint line (the Monoton lesson).
 - Branch pushed to origin (PUBLIC repo) — push after every commit batch now.
