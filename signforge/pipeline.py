@@ -103,25 +103,90 @@ def _autofit_text(params: SignParams, art, layout, warnings: list[str]):
                 f"one letter per plate: letter spacing opened "
                 f"+{deficit + 0.5:.0f} mm so every kerning gap takes a clean cut"
             )
+
+    # half 3: the pad/margin arithmetic above is an ESTIMATE — real piece
+    # masks carry plate margins, seam relief, and band reach it can't see, so
+    # verify against the actual panelizer and refine until every plate truly
+    # fits (the gate-refusal class: 'scaled to 40%' then P1 184×183 > 180).
+    # Deliberate merge mode (negative tracking) is respected and skipped.
+    if not whole_fits and p2.content.letter_spacing_mm >= 0:
+        for _ in range(3):
+            worst = _measured_worst_fit(p2, layout)
+            if worst >= 1.0:
+                break
+            s = worst * 0.985
+            p2 = p2.model_copy(deep=True)
+            p2.content.cap_height_mm = round(p2.content.cap_height_mm * s, 1)
+            art, layout = refresh(p2)
+            warnings.append(
+                f"one letter per plate: refined to {s:.0%} after measuring the "
+                f"real plates (letters {p2.content.cap_height_mm:.0f} mm)"
+            )
     return p2, art, layout
 
 
-def _bed_gate(pieces, params: SignParams, warnings: list[str], hard: bool) -> None:
-    """Bed-fit is a promise, not a hope. Upstream panelization warns-and-ships
-    in a few unsplittable cases (halo single face, region with no legal cut,
-    one letter bigger than the bed); this single gate measures every piece
-    mask against the printable envelope (either orientation) and refuses to
-    export what can't plate. hard=False (previews) downgrades to a loud
-    warning so you can still see the blueprint while dialing the size in.
-    printer.allow_oversize=true (JSON/CLI only) is the I'll-saw-it-myself
+def _measured_worst_fit(params: SignParams, layout) -> float:
+    """Panelize for real (2D only, no solids) and return the worst piece's
+    fit ratio vs the bed — ≥1.0 means every plate fits either orientation."""
+    from .geom2d import band, ring_offset
+    from .panelize import panelize
+
+    if params.style.kind == "neon":
+        from .parts.neon import neon_plate_footprint
+        from .tubes import plan_tubes
+
+        strokes, lay, _meta, _w = plan_tubes(layout, params)
+        b_out = band(strokes, params.style.neon.band_outer)
+        footprint = neon_plate_footprint(lay, b_out, params)
+        pieces, _cuts, _pw = panelize(footprint, strokes, [], params,
+                                      avoid=b_out, layout=lay)
+    elif params.style.kind == "channel":
+        from .parts.channel import channel_pan_footprint
+
+        footprint = channel_pan_footprint(layout, params)
+        pieces, _cuts, _pw = panelize(footprint, [], [], params,
+                                      avoid=ring_offset(layout.fills, 4.0),
+                                      layout=layout)
+    else:
+        return 1.0
+    bx, by = params.printer.bed
+    worst = 1.0
+    for pc in pieces:
+        ext = pc.mask.intersection(footprint)
+        if ext.is_empty:
+            continue
+        x0, y0, x1, y1 = ext.bounds
+        w, h = max(x1 - x0, 0.001), max(y1 - y0, 0.001)
+        fit = max(min(bx / w, by / h), min(bx / h, by / w))
+        worst = min(worst, fit)
+    return worst
+
+
+def _bed_gate(pieces, footprint, params: SignParams, warnings: list[str], hard: bool) -> None:
+    """Bed-fit is a promise, not a hope. Upstream panelization warns in a few
+    unsplittable cases (halo single face, region with no legal cut, one letter
+    bigger than the bed); this gate measures every piece against the printable
+    envelope (either orientation, via the same panelize._fits predicate) and
+    refuses to export what can't plate. The measure is mask∩footprint — what
+    clip_bodies_to_piece actually exports — NOT the raw mask: halo letter
+    masks are padded bboxes ~2×(flange_w+6) wider than any real body.
+    hard=False (previews) downgrades to a loud warning so you can still see
+    the blueprint while dialing the size in. printer.allow_oversize=true
+    (CLI/params.json only; the console refuses it) is the I'll-saw-it-myself
     escape hatch."""
+    from .panelize import _fits
+
     bx, by = params.printer.bed
     eps = 0.1  # float slop; full-bed grid panels are legitimately bed-sized
     bad = []
     for pc in pieces:
-        x0, y0, x1, y1 = pc.mask.bounds
+        ext = pc.mask if footprint is None else pc.mask.intersection(footprint)
+        if ext.is_empty:
+            continue
+        x0, y0, x1, y1 = ext.bounds
         w, h = x1 - x0, y1 - y0
-        if not ((w <= bx + eps and h <= by + eps) or (h <= bx + eps and w <= by + eps)):
+        fits, _rot = _fits(w - eps, h - eps, (bx, by))
+        if not fits:
             bad.append(f"{pc.label} needs {w:.0f}×{h:.0f} mm (bed {bx:.0f}×{by:.0f})")
     if not bad:
         return
@@ -240,7 +305,7 @@ def quick_plan(params: SignParams):
 
             ledplan = strip_plan(strokes, params)
     assign_pixels(pieces, pixels)
-    _bed_gate(pieces, params, warnings, hard=False)
+    _bed_gate(pieces, footprint, params, warnings, hard=False)
     return layout, ledplan, pieces, warnings
 
 
@@ -300,6 +365,7 @@ def build(
                 ledplan = place_pixels(spine, params, seams=cuts)
                 warnings += ledplan.audits
                 pixels = ledplan.pixels
+        _bed_gate(pieces, footprint, params, warnings, hard=True)
         bodies, _fp = build_channel_bodies(layout, pixels, params)
     elif params.style.kind == "halo":
         from .leds import place_pixels
@@ -351,6 +417,7 @@ def build(
 
             ledplan = strip_plan(strokes, params)
             warnings += ledplan.audits
+        _bed_gate(pieces, footprint, params, warnings, hard=True)
         bodies, _fp = build_halo_bodies(layout, pixels, params)
     else:
         from .leds import place_pixels
@@ -376,6 +443,7 @@ def build(
 
             ledplan = strip_plan(strokes, params)
             warnings += ledplan.audits
+        _bed_gate(pieces, footprint, params, warnings, hard=True)
         bodies, _fp = build_neon_bodies(layout, strokes, pixels, params)
         if params.output.debug_overlays and layout.fills is not None and not layout.fills.is_empty:
             from .skeleton import debug_overlay
@@ -385,7 +453,6 @@ def build(
             files.append(str(dpath))
 
     assign_pixels(pieces, pixels)
-    _bed_gate(pieces, params, warnings, hard=True)
     multi = len(pieces) > 1
     for pc in pieces:
         if pc.rotated:

@@ -22,3 +22,12 @@ print the fit ladder and pick the value that snaps:
 ```bash
 uv run signforge coupon -o out/coupons
 ```
+
+## About `CHARGE.svg`
+
+`CHARGE.svg` is the word-art from the author's own TEDxFargo CHARGE sign build
+(the project this tool was extracted from — see
+[tedxfargo-charge-sign](https://github.com/booherbg/tedxfargo-charge-sign)).
+It ships here solely as the pipeline's ground-truth QA asset
+(`scripts/qa_gold.py`, `tests/test_charge_parity.py`). It is not covered by
+this repo's MIT license; don't reuse the artwork outside this test context.

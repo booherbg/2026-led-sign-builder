@@ -267,6 +267,15 @@ def create_app(
     # ---- params + preview ------------------------------------------------------
     def resolve_params(payload: dict) -> SignParams:
         raw = dict(payload.get("params") or {})
+        # console builds ALWAYS enforce the bed-fit gate (Law 8) — the escape
+        # hatch is CLI/params.json territory; reject loudly rather than strip
+        # silently so the JSON drawer doesn't lie about what will happen
+        if (raw.get("printer") or {}).get("allow_oversize"):
+            raise HTTPException(
+                422,
+                "printer.allow_oversize is a CLI/params.json escape hatch — "
+                "console builds always enforce the bed-fit gate",
+            )
         content = dict(raw.get("content") or {})
         content.pop("font_path", None)
         content.pop("art_path", None)

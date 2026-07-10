@@ -291,7 +291,9 @@ function paramsFromUI(){
   base.texture.targets = targets.length ? targets : ['lens'];
   base.leds = base.leds || {};
   base.leds.kind = $('leds').value;
-  base.leds.pitch_mm = Math.max(13, +$('pitch').value || 17);  // schema floor: flange is 13
+  // console floor 14: flanges are Ø13.6, so 13.x pitches physically interfere
+  // (schema allows ≥13 for CLI/params.json experiments — snug-pair audit fires)
+  base.leds.pitch_mm = Math.max(14, +$('pitch').value || 17);
   base.colors = base.colors || {};
   base.colors.palette = $('palette').value;
   const cc = customColors();
@@ -369,16 +371,22 @@ async function build(){
     return;
   }
   $('buildbtn').disabled = true;
-  const r = await fetch('/api/build', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload())});
-  $('buildbtn').disabled = false;
-  if (!r.ok){
+  try {
+    const r = await fetch('/api/build', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload())});
+    if (!r.ok){
+      $('joblog').hidden = false;
+      $('joblog').textContent = '✗ ' + (await r.text());
+      return;
+    }
+    $('joblog').hidden = true;
+    pollQueue(true);
+  } catch (e) {
     $('joblog').hidden = false;
-    $('joblog').textContent = '✗ ' + (await r.text());
-    return;
+    $('joblog').textContent = '✗ could not reach the server — is it still running? (' + e.message + ')';
+  } finally {
+    $('buildbtn').disabled = false;   // never strand the button on a dropped fetch
   }
-  $('joblog').hidden = true;
-  pollQueue(true);
 }
 
 async function pollQueue(force){

@@ -292,7 +292,8 @@ def panelize(
         if len(children) < 2:
             regions.append(r)
             warnings.append(
-                f"seam near {axis}={c:.0f} failed to split the region — exported oversized"
+                f"seam near {axis}={c:.0f} failed to split the region — "
+                "piece exceeds the bed"
             )
             continue
         if len(children) > 2:

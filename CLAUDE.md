@@ -33,7 +33,7 @@ Rules for any agent/dev working in this repo.
 6. mm everywhere; constants change only with a new printed test (they carry provenance).
 7. No outbound network calls in library/web code. Test assets are committed with licenses.
 8. The bed-fit gate is hard: what can't plate doesn't export (`pipeline._bed_gate`;
-   `printer.allow_oversize` is the only escape and lives in JSON/CLI, not the console).
+   `printer.allow_oversize` is the only escape, CLI/params.json only — the console rejects it with a 422).
 9. Exported files are the truth: gold QA re-audits STL **and 3MF** meshes from disk
    at the precision they were written (float32).
 

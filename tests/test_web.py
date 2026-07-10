@@ -132,3 +132,12 @@ def test_client_paths_are_ignored(client):
     }
     r = client.post("/api/preview2d", json=payload)
     assert r.status_code == 200          # bundled font used, path discarded
+
+
+def test_console_rejects_allow_oversize(client):
+    # Law 8: the escape hatch is CLI/params.json only — a console payload
+    # carrying it must 422 loudly, not silently bypass the bed-fit gate
+    r = client.post("/api/build", json={
+        "params": {"printer": {"preset": "bambu-a1-mini", "allow_oversize": True}}})
+    assert r.status_code == 422
+    assert "escape hatch" in r.text

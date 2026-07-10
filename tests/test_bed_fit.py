@@ -98,3 +98,32 @@ def test_bed_gate_allow_oversize_escape_hatch(tmp_path):
     cfg["printer"] = {"preset": "bambu-a1-mini", "allow_oversize": True}
     result = build(SignParams.model_validate(cfg), tmp_path / "hatch")
     assert any("OVERSIZE EXPORT" in w for w in result.warnings)
+
+
+def test_bed_gate_measures_real_halo_extent_not_padded_mask(tmp_path):
+    # letters whose INK fits the bed but whose padded per-letter masks
+    # (ink + 2×(flange_w+6) = +44 mm) do not — halo bodies are all inward
+    # offsets of the ink, so this must BUILD, not refuse (review finding #1)
+    cfg = {"name": "mm-halo",
+           "content": {"text": "MM", "cap_height_mm": 220},
+           "style": {"kind": "halo", "backer": "none"},
+           "texture": {"mode": "none"}, "leds": {"kind": "none"},
+           "printer": {"preset": "bambu-x1c"}}
+    p = SignParams.model_validate(cfg)
+    build(p, tmp_path / "mm")
+    _assert_all_fit(tmp_path / "mm", p.printer.bed)
+
+
+def test_plating_law_scaled_text_passes_the_gate(tmp_path):
+    # THE TEXT PLATING LAW promises 'scale down so every letter plates';
+    # the gate must accept what autofit produces — measured against the real
+    # panelizer, not the pad estimate (review finding #2: WAVE@400/a1-mini
+    # reported 'scaled to 40%' then refused P1 184×183 > 180)
+    cfg = {"name": "wave",
+           "content": {"text": "WAVE", "cap_height_mm": 400},
+           "style": {"kind": "neon"}, "texture": {"mode": "none"},
+           "printer": {"preset": "bambu-a1-mini"}}
+    p = SignParams.model_validate(cfg)
+    result = build(p, tmp_path / "wave")
+    assert any("one letter per plate" in w for w in result.warnings)
+    _assert_all_fit(tmp_path / "wave", p.printer.bed)
