@@ -38,9 +38,13 @@ ID16 = "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"    # config matrix (16, row-major)
 
 
 def _mesh_xml(verts: np.ndarray, tris: np.ndarray) -> str:
+    # Write the float32-audited coordinates at full round-trip precision
+    # (9 sig digits uniquely identify a binary32). %.6g merged audited-distinct
+    # vertices at sign scale — same defect class as the STL float32 write gap.
+    v32 = np.asarray(verts, dtype=np.float32)
     v = "".join(
-        '<vertex x="%s" y="%s" z="%s"/>' % ("%.6g" % p[0], "%.6g" % p[1], "%.6g" % p[2])
-        for p in verts
+        '<vertex x="%.9g" y="%.9g" z="%.9g"/>' % (p[0], p[1], p[2])
+        for p in v32
     )
     t = "".join('<triangle v1="%d" v2="%d" v3="%d"/>' % tuple(tr) for tr in tris)
     return "<mesh><vertices>%s</vertices><triangles>%s</triangles></mesh>" % (v, t)
